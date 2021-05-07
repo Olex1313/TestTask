@@ -79,10 +79,10 @@ def check_test_solver():
     solver_exist = {}
     for test in tests:
         with open(os.path.join(ft_run, test, f'{test}.stdout'), 'r') as f:
-            content = f.read()
-            if 'Solver finished at' in content:
-                solver_exist[test] = False
-            else:
+            for line in f.readlines():
+                if line.startswith('Solver finished at'):
+                    solver_exist[test] = False
+                    break
                 solver_exist[test] = True
 
     return solver_exist
