@@ -2,6 +2,10 @@ from config import LOGS_PATH, T_REF, T_RUN
 import os
 import re
 
+
+def file_is_empty(path):
+    return os.stat(path).st_size == 0
+
 def parse_memory(s):
     return float(s.split()[-2])
 
@@ -46,9 +50,9 @@ def check_test_missing():
     ft_ref = os.listdir(os.path.join(homepath, T_REF))
     ft_run = set(map(int, ft_run))
     ft_ref = set(map(int, ft_ref))
-    tests_run_missing = ft_ref - ft_run
-    tests_run_extra = ft_run - ft_ref
-    return (tests_run_missing, tests_run_extra)
+    tests_run_missing = list(map(lambda x: f'{str(x)}/{str(x)}.stdout', ft_ref - ft_run))
+    tests_run_extra = list(map(lambda x: f'{str(x)}/{str(x)}.stdout', ft_run - ft_ref))
+    return tests_run_missing, tests_run_extra
 
 def check_test_errors():
     homepath = os.getcwd()
@@ -58,10 +62,11 @@ def check_test_errors():
     for test in tests:
         errors[test] = []
         with open(os.path.join(ft_run, test, f'{test}.stdout'), 'r') as f:
-            content = list(map(lambda x: x.lower(), f.readlines()))
+            text = f.readlines()
+            content = list(map(lambda x: x.lower(), text))
             for num, line in enumerate(content, start=1):
                 if 'error' in line:
-                    errors[test].append(num)
+                    errors[test].append((num, text[num - 1].strip('\n')))
     
     return errors
                 
@@ -76,9 +81,9 @@ def check_test_solver():
         with open(os.path.join(ft_run, test, f'{test}.stdout'), 'r') as f:
             content = f.read()
             if 'Solver finished at' in content:
-                solver_exist[test] = True
-            else:
                 solver_exist[test] = False
+            else:
+                solver_exist[test] = True
 
     return solver_exist
 
@@ -121,5 +126,65 @@ def check_test_bricks():
     
     return bricks 
 
+def memory_diff(memory_test):
+    for test in memory_test:
+        run = memory_test[test][0]
+        ref = memory_test[test][1]
+        diff = (run - ref)/ref
+
 def make_report(results):
-    pass
+    with open('report.txt', 'w') as f:
+
+        if results[T_RUN] != 1 or results[T_REF] != 1:
+            if results[T_RUN] != 1:
+                print('directory missing: ft_run', file=f)
+            if results[T_REF] != 1:
+                print('directory missing: ft_reference', file=f)
+            f.close()
+            return
+
+        if results['missing_files'] != [] or results['extra_files'] != []:
+            if results['missing_files'] != []:
+                missing = ', '.join(results['missing_files'])
+                print(f'In ft_run there are missing files present in ft_reference: {missing}', file=f)
+            if results['extra_files'] != []:
+                extra = ', '.join(results['extra_files'])
+                print(f'In ft_run there are extra files not present in ft_reference: {extra}', file=f)
+            f.close()
+            return
+        
+        cases_tests = results['cases_errors']
+        if any(cases_tests.values()):
+            for test in cases_tests:
+                if cases_tests[test] != []:
+                    for error in cases_tests[test]:
+                        num = error[0]
+                        line = error[1]
+                        print(f"{test}/{test}.stdout({num}): {line}", file=f)
+        
+        solver_tests = results['solver']
+        if any(list(solver_tests.values())):
+            for test in solver_tests:
+                if solver_tests[test]:
+                    print(f"{test}/{test}.stdout: Missing 'Solver finished at'", file=f)
+        
+        memory = results['memory_test']
+        for test in memory:
+            run = memory[test][0]
+            ref = memory[test][1]
+            diff = round((run - ref) / ref, 2)
+            if abs(diff) > 0.5:
+                rep = f"{test}/{test}.stdout: different 'Memory Working Set Peak' "
+                stats = f"(ft_run={run}, ft_reference={ref}, rel.diff={diff}, criterion=0.5)"
+                print(rep+stats, file=f)
+
+        bricks = results['bricks']
+        for test in bricks:
+            run = bricks[test][0]
+            ref = bricks[test][1]
+            diff = round((run - ref) / ref, 2)
+            if abs(diff) > 0.1:
+                rep = f"{test}/{test}.stdout: different 'Total' of bricks "
+                stats = f"(ft_run={run}, ft_reference={ref}, rel.diff={diff}, criterion=0.1)"
+                print(rep+stats, file=f)
+ 
