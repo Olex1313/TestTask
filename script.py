@@ -42,9 +42,3 @@ for group in folders: #Groups = 13-ROTATED_FLOWS  14-HEAT_TRANSFER_IN_SOLID  15-
             with open('report.txt', 'r') as f:
                 print(f.read().strip('\n'))
         reps.append(report)
-
-
-
-
-# for rep in reps:
-#     print(rep)
