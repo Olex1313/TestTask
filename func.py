@@ -1,4 +1,4 @@
-from config import LOGS_PATH, T_REF, T_RUN
+from config import LOGS_PATH, T_REF, T_RUN, REP_NAME
 import os
 import re
 
@@ -19,7 +19,7 @@ def get_folders_list(cwd):
 
 def go_to_directory(LOGS_PATH):
     os.chdir(LOGS_PATH)
-    folders = list(map(os.path.abspath, os.listdir()))
+    folders = list(map(os.path.abspath, sorted(os.listdir())))
     return folders
     
 def check_test_exists():
@@ -153,6 +153,8 @@ def make_report(results):
             f.close()
             return
         
+        reps = []
+
         cases_tests = results['cases_errors']
         if any(cases_tests.values()):
             for test in cases_tests:
@@ -160,13 +162,13 @@ def make_report(results):
                     for error in cases_tests[test]:
                         num = error[0]
                         line = error[1]
-                        print(f"{test}/{test}.stdout({num}): {line}", file=f)
+                        reps.append(f"{test}/{test}.stdout({num}): {line}")
         
         solver_tests = results['solver']
         if any(list(solver_tests.values())):
             for test in solver_tests:
                 if solver_tests[test]:
-                    print(f"{test}/{test}.stdout: Missing 'Solver finished at'", file=f)
+                    reps.append(f"{test}/{test}.stdout: Missing 'Solver finished at'")
         
         memory = results['memory_test']
         for test in memory:
@@ -176,7 +178,7 @@ def make_report(results):
             if abs(diff) > 0.5:
                 rep = f"{test}/{test}.stdout: different 'Memory Working Set Peak' "
                 stats = f"(ft_run={run}, ft_reference={ref}, rel.diff={diff}, criterion=0.5)"
-                print(rep+stats, file=f)
+                reps.append(rep+stats)
 
         bricks = results['bricks']
         for test in bricks:
@@ -186,5 +188,22 @@ def make_report(results):
             if abs(diff) > 0.1:
                 rep = f"{test}/{test}.stdout: different 'Total' of bricks "
                 stats = f"(ft_run={run}, ft_reference={ref}, rel.diff={diff}, criterion=0.1)"
-                print(rep+stats, file=f)
- 
+                reps.append(rep+stats)
+        
+        reps.sort()
+        for report in reps:
+            print(report, file=f)
+
+def read_report(report):
+    if file_is_empty('report.txt'):
+            std_info = 'OK: '
+            std_info += os.path.join(report['group'], report['case'])
+            std_info += '/'
+            print(std_info)
+    else:
+        std_info = 'FAIL: '
+        std_info += os.path.join(report['group'], report['case'])
+        std_info += '/'
+        print(std_info)
+        with open('report.txt', 'r') as f:
+            print(f.read().strip('\n'))
