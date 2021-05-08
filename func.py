@@ -50,8 +50,8 @@ def check_test_missing():
     ft_ref = os.listdir(os.path.join(homepath, T_REF))
     ft_run = set(map(int, ft_run))
     ft_ref = set(map(int, ft_ref))
-    tests_run_missing = list(map(lambda x: f'{str(x)}/{str(x)}.stdout', ft_ref - ft_run))
-    tests_run_extra = list(map(lambda x: f'{str(x)}/{str(x)}.stdout', ft_run - ft_ref))
+    tests_run_missing = list(map(lambda x: f"'{str(x)}/{str(x)}.stdout'", ft_ref - ft_run))
+    tests_run_extra = list(map(lambda x: f"'{str(x)}/{str(x)}.stdout'", ft_run - ft_ref))
     return tests_run_missing, tests_run_extra
 
 def check_test_errors():
@@ -106,7 +106,7 @@ def check_test_memory(): # -> dict: key=test, el[0] = run, el[1] = ref
             for line in content:
                 if line.startswith('Memory Working Set Current'):
                     ref_peaks.append(parse_memory(line))
-        memory_peak[test] = (max(run_peaks), max(ref_peaks))
+        memory_peak[test] = (run_peaks[-1], ref_peaks[-1])
 
     return memory_peak 
     
@@ -130,7 +130,7 @@ def memory_diff(memory_test):
     for test in memory_test:
         run = memory_test[test][0]
         ref = memory_test[test][1]
-        diff = (run - ref)/ref
+        diff = float((run - ref)/ref)
 
 def make_report(results):
     with open('report.txt', 'w') as f:
@@ -168,7 +168,7 @@ def make_report(results):
         if any(list(solver_tests.values())):
             for test in solver_tests:
                 if solver_tests[test]:
-                    reps.append(f"{test}/{test}.stdout: Missing 'Solver finished at'")
+                    reps.append(f"{test}/{test}.stdout: missing 'Solver finished at'")
         
         memory = results['memory_test']
         for test in memory:
