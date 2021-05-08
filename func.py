@@ -63,9 +63,8 @@ def check_test_errors():
         errors[test] = []
         with open(os.path.join(ft_run, test, f'{test}.stdout'), 'r') as f:
             text = f.readlines()
-            content = list(map(lambda x: x.lower(), text))
-            for num, line in enumerate(content, start=1):
-                if 'error' in line:
+            for num, line in enumerate(text, start=1):
+                if ' error' in line.lower() or '\terror' in line.lower():
                     errors[test].append((num, text[num - 1].strip('\n')))
     
     return errors
@@ -174,10 +173,10 @@ def make_report(results):
         for test in memory:
             run = memory[test][0]
             ref = memory[test][1]
-            diff = round((run - ref) / ref, 2)
+            diff = (run - ref) / ref
             if abs(diff) > 0.5:
                 rep = f"{test}/{test}.stdout: different 'Memory Working Set Peak' "
-                stats = f"(ft_run={run}, ft_reference={ref}, rel.diff={diff}, criterion=0.5)"
+                stats = f"(ft_run={run}, ft_reference={ref}, rel.diff={diff:.2f}, criterion=0.5)"
                 reps.append(rep+stats)
 
         bricks = results['bricks']
@@ -187,7 +186,7 @@ def make_report(results):
             diff = round((run - ref) / ref, 2)
             if abs(diff) > 0.1:
                 rep = f"{test}/{test}.stdout: different 'Total' of bricks "
-                stats = f"(ft_run={run}, ft_reference={ref}, rel.diff={diff}, criterion=0.1)"
+                stats = f"(ft_run={run}, ft_reference={ref}, rel.diff={diff:.2f}, criterion=0.1)"
                 reps.append(rep+stats)
         
         reps.sort()
