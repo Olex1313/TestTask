@@ -1,4 +1,3 @@
-from config import LOGS_PATH, T_REF, T_RUN, REP_NAME
 import os
 import re
 
@@ -11,38 +10,6 @@ def parse_memory(s):
 
 def parse_bricks(s):
     return int(re.findall(r'MESH::Bricks: Total=\d+', s)[0].split('=')[-1])
-
-def get_folders_list(cwd):
-    os.chdir(cwd)
-    folders = list(map(os.path.abspath, os.listdir()))
-    return folders
-
-def go_to_directory(LOGS_PATH):
-    os.chdir(LOGS_PATH)
-    folders = list(map(os.path.abspath, sorted(os.listdir())))
-    return folders
-    
-def check_test_exists():
-    missing = []
-    cases = os.listdir()
-    report = {
-        'group': os.path.split(os.path.split(os.getcwd())[0])[-1],
-        'case': os.path.split(os.getcwd())[-1],
-        T_RUN: 1,
-        T_REF: 1
-    }
-    if not cases:
-        report[T_RUN] = 0
-        report[T_REF] = 0
-        return report
-    else:
-        if T_RUN not in cases:
-            report[T_RUN] = 0
-        if T_REF not in cases:
-            report[T_REF] = 0
-    return report
-    
-
 
 def check_test_missing():
     homepath = os.getcwd()
@@ -105,6 +72,8 @@ def check_test_memory(): # -> dict: key=test, el[0] = run, el[1] = ref
             for line in content:
                 if line.startswith('Memory Working Set Current'):
                     ref_peaks.append(parse_memory(line))
+                if line.startswith('MESH::Bricks:'):
+                    ref_bricks = 
         memory_peak[test] = (run_peaks[-1], ref_peaks[-1])
 
     return memory_peak 
