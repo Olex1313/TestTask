@@ -1,5 +1,7 @@
 import os
 import re
+# import time
+# start  = time.time()
 LOGS_PATH = os.path.join(os.getcwd(), '/home/alexey/Documents/Work/TestTask/task1/logs')
 
 def parse_bricks(s):
@@ -8,19 +10,13 @@ def parse_bricks(s):
 def parse_memory(s):
     return float(s.split()[-2])
 
-def file_is_empty(path):
-    return os.stat(path).st_size == 0
-
 def make_report(results, path):
     with open(os.path.join(path, 'report.txt'), 'w') as f:
 
-        if results['ft_run'] != 1 or results['ft_reference'] != 1:
-            if results['ft_run'] != 1:
+        if not results['ft_run'] or  not results['ft_reference']:
+            if not results['ft_run']:
                 print("directory missing: ft_run", file=f)
-            if results['ft_reference'
-            
-            
-            ] != 1:
+            if not results['ft_reference']:
                 print("directory missing: ft_reference", file=f)
             f.close()
             return
@@ -34,7 +30,7 @@ def make_report(results, path):
                 print(f"In ft_run there are extra files not present in ft_reference: {extra}", file=f)
             f.close()
             return
-        
+
         reps = []
 
         cases_tests = results['cases_errors']
@@ -45,13 +41,13 @@ def make_report(results, path):
                         num = error[0]
                         line = error[1]
                         reps.append(f"{test}/{test}.stdout({num}): {line}")
-        
+
         solver_tests = results['solver']
-        if any(list(solver_tests.values())):
+        if any(solver_tests.values()):
             for test in solver_tests:
                 if solver_tests[test]:
                     reps.append(f"{test}/{test}.stdout: missing 'Solver finished at'")
-        
+
         memory = results['memory_test']
         for test in memory:
             run = memory[test][0]
@@ -71,17 +67,17 @@ def make_report(results, path):
                 rep = f"{test}/{test}.stdout: different 'Total' of bricks "
                 stats = f"(ft_run={run}, ft_reference={ref}, rel.diff={diff:.2f}, criterion=0.1)"
                 reps.append(rep+stats)
-        
+
         reps.sort()
         for report in reps:
             print(report, file=f)
 
 def read_report(report, path):
-    if file_is_empty(os.path.join(path, 'report.txt')):
-            std_info = 'OK: '
-            std_info += os.path.join(report['group'], report['case'])
-            std_info += '/'
-            print(std_info)
+    if os.stat(os.path.join(path, 'report.txt')).st_size == 0:
+        std_info = 'OK: '
+        std_info += os.path.join(report['group'], report['case'])
+        std_info += '/'
+        print(std_info)
     else:
         std_info = 'FAIL: '
         std_info += os.path.join(report['group'], report['case'])
@@ -102,7 +98,7 @@ for group in folders: #Groups = 13-ROTATED_FLOWS  14-HEAT_TRANSFER_IN_SOLID  15-
             'ft_reference': 1 if os.path.exists(os.path.join(test, 'ft_reference')) else 0
         }
 
-        if report['ft_reference'] == 0 or report['ft_run'] == 0:
+        if not report['ft_reference'] or not report['ft_run']:
             make_report(report, test)
             read_report(report, test)
             continue
@@ -139,7 +135,7 @@ for group in folders: #Groups = 13-ROTATED_FLOWS  14-HEAT_TRANSFER_IN_SOLID  15-
                     solver_exist[case] = False
                 if line.startswith('Memory Working Set Current'):
                     run_peaks.append(parse_memory(line))
-                if line.startswith('MESH::Bricks: Total'):
+                if line.startswith('MESH::Bricks: Total='):
                     run_bricks = parse_bricks(line)
             
             for line in ref_text:
@@ -157,3 +153,5 @@ for group in folders: #Groups = 13-ROTATED_FLOWS  14-HEAT_TRANSFER_IN_SOLID  15-
         report['bricks'] = bricks
         make_report(report, test)
         read_report(report, test)
+# end = time.time() - start
+# print(f'It took {end} time')
