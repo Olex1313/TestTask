@@ -1,8 +1,7 @@
 import os
 import re
-# import time
-# start  = time.time()
-LOGS_PATH = os.path.join(os.getcwd(), '/home/alexey/Documents/Work/TestTask/task1/logs')
+
+LOGS_PATH = os.path.join(os.getcwd(), '/home/alexey/Documents/Work/task/logs')
 
 def parse_bricks(s):
     return int(re.search(r'Total=\d+', s).group().split('=')[-1])
@@ -88,8 +87,8 @@ def read_report(report, path):
 
 folders = list(map(lambda x: os.path.join(LOGS_PATH, x), sorted(os.listdir(LOGS_PATH))))
 
-for group in folders: #Groups = 13-ROTATED_FLOWS  14-HEAT_TRANSFER_IN_SOLID  15-JOULE_HEATING_IN_SOLID
-    tests = list(map(lambda x: os.path.join(LOGS_PATH, group, x), sorted(os.listdir(group)))) # List of testcases
+for group in folders:
+    tests = list(map(lambda x: os.path.join(LOGS_PATH, group, x), sorted(os.listdir(group))))
     for test in tests:
         report = {
             'group': os.path.split(os.path.split(test)[0])[-1],
@@ -153,5 +152,3 @@ for group in folders: #Groups = 13-ROTATED_FLOWS  14-HEAT_TRANSFER_IN_SOLID  15-
         report['bricks'] = bricks
         make_report(report, test)
         read_report(report, test)
-# end = time.time() - start
-# print(f'It took {end} time')
