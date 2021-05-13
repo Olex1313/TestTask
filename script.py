@@ -1,13 +1,17 @@
 import os
 import re
+import time
 
 LOGS_PATH = os.path.join(os.getcwd(), '/home/alexey/Documents/Work/task/logs')
 
-def form_name(s):
+def form_name(s : str) -> str:
+    """
+    used to make propper filenames
+    """
     s = f'{str(s)}/{str(s)}.stdout'
     return s
 
-def read_report(report, path):
+def read_report(report : dict, path : str) -> dict:
     """
     reads report.txt and writes to stdout
     takes report : dict, path : str
@@ -27,7 +31,7 @@ def read_report(report, path):
         with open(os.path.join(path, 'report.txt'), 'r') as f:
             print(f.read(), end='')
 
-def make_report(results, path):
+def make_report(results : dict, path : str):
     """
     makes report.txt file in path directory
     takes results : dict , path : str
@@ -94,7 +98,10 @@ def make_report(results, path):
         for report in reps:
             print(report, file=f)
 
-def check_test(test_path):
+def check_test(test_path : str) -> dict:
+    """
+    check test in test_path
+    """
     report = {
         'group': os.path.split(os.path.split(test_path)[0])[-1],
         'case': os.path.split(test_path)[-1],
@@ -130,25 +137,23 @@ def check_test(test_path):
             ref_text = f.readlines()
         errors[case] = []
         solver_exist[case] = True
-        run_peaks = []
-        ref_peaks = []
         for num, line in enumerate(run_text, start=1): # search file for errors
             if ' error' in line.lower() or '\terror' in line.lower():
                 errors[case].append((num, run_text[num - 1].strip('\n')))
             if line.startswith('Solver finished at'):
                 solver_exist[case] = False
             if line.startswith('Memory Working Set Current'):
-                run_peaks.append(float(re.search(r'Memory Working Set Peak = ([0-9]*\.?[0-9]*)', line).group(1)))
+                run_peaks = float(re.search(r'Memory Working Set Peak = ([0-9]*\.?[0-9]*)', line).group(1))
             if line.startswith('MESH::Bricks: Total='):
                 run_bricks = int(re.search(r'Total=(\d+)', line).group(1))
 
         for line in ref_text: # search file for errors
             if line.startswith('Memory Working Set Current'):
-                ref_peaks.append(float(re.search(r'Memory Working Set Peak = ([0-9]*\.?[0-9]*)', line).group(1)))
+                ref_peaks = float(re.search(r'Memory Working Set Peak = ([0-9]*\.?[0-9]*)', line).group(1))
             if line.startswith('MESH::Bricks: Total='):
                 ref_bricks = int(re.search(r'Total=(\d+)', line).group(1))
 
-        memory_peak[case] = (run_peaks[-1], ref_peaks[-1])
+        memory_peak[case] = (run_peaks, ref_peaks)
         bricks[case] = (run_bricks, ref_bricks)
 
     # linking results to report
