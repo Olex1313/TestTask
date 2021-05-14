@@ -2,6 +2,8 @@ import os
 import re
 
 LOGS_PATH = os.path.join(os.getcwd(), '/home/alexey/Documents/Work/task/logs')
+B_DIFF = 0.1 # Total of bricks criteria
+M_DIFF = 0.5 # Memory set peak criteria
 
 def form_name(s : str) -> str:
     """
@@ -90,9 +92,9 @@ def make_report(results : dict, path : str):
             run = memory[test][0]
             ref = memory[test][1]
             diff = (run - ref) / ref
-            if abs(diff) > 0.5:
+            if abs(diff) > M_DIFF:
                 rep = f"{test}/{test}.stdout: different 'Memory Working Set Peak' "
-                stats = f"(ft_run={run}, ft_reference={ref}, rel.diff={diff:.2f}, criterion=0.5)"
+                stats = f"(ft_run={run}, ft_reference={ref}, rel.diff={diff:.2f}, criterion={M_DIFF:.1f})"
                 reps.append(rep+stats)
 
         bricks = results['bricks']
@@ -100,9 +102,9 @@ def make_report(results : dict, path : str):
             run = bricks[test][0]
             ref = bricks[test][1]
             diff = round((run - ref) / ref, 2)
-            if abs(diff) > 0.1:
+            if abs(diff) > B_DIFF:
                 rep = f"{test}/{test}.stdout: different 'Total' of bricks "
-                stats = f"(ft_run={run}, ft_reference={ref}, rel.diff={diff:.2f}, criterion=0.1)"
+                stats = f"(ft_run={run}, ft_reference={ref}, rel.diff={diff:.2f}, criterion={B_DIFF:.1f})"
                 reps.append(rep+stats)
 
         reps.sort() # for appropriate order of errors
@@ -183,3 +185,4 @@ for group in folders:
         report = check_test(test)
         make_report(report, test) # make report
         read_report(report, test) # read it to stdout
+
