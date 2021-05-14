@@ -1,6 +1,5 @@
 import os
 import re
-import time
 
 LOGS_PATH = os.path.join(os.getcwd(), '/home/alexey/Documents/Work/task/logs')
 
@@ -10,6 +9,18 @@ def form_name(s : str) -> str:
     """
     s = f'{str(s)}/{str(s)}.stdout'
     return s
+
+def parse_memory(line : str) -> float:
+    """
+    finds memory set peak in line and parses it using regex
+    """
+    return float(re.search(r'Memory Working Set Peak = ([0-9]*\.?[0-9]*)', line).group(1))
+
+def parse_bricks(line : str) -> int:
+    """
+    finds total bricks count and parses it using regex
+    """
+    return int(re.search(r'Total=(\d+)', line).group(1))
 
 def read_report(report : dict, path : str) -> dict:
     """
@@ -130,28 +141,28 @@ def check_test(test_path : str) -> dict:
     memory_peak = {} # to store case : last memory peak
     bricks = {} # to store case : last bricks number
     for case in ft_run:
-        # read content of .stdout files
-        with open(os.path.join(test_path,'ft_run', form_name(case)), 'r') as f:
-            run_text = f.readlines()
-        with open(os.path.join(test_path, 'ft_reference', form_name(case)), 'r') as f:
-            ref_text = f.readlines()
         errors[case] = []
         solver_exist[case] = True
-        for num, line in enumerate(run_text, start=1): # search file for errors
-            if ' error' in line.lower() or '\terror' in line.lower():
-                errors[case].append((num, run_text[num - 1].strip('\n')))
-            if line.startswith('Solver finished at'):
-                solver_exist[case] = False
-            if line.startswith('Memory Working Set Current'):
-                run_peaks = float(re.search(r'Memory Working Set Peak = ([0-9]*\.?[0-9]*)', line).group(1))
-            if line.startswith('MESH::Bricks: Total='):
-                run_bricks = int(re.search(r'Total=(\d+)', line).group(1))
+        # search ft_run file
+        with open(os.path.join(test_path,'ft_run', form_name(case)), 'r') as f:
+            num = 1
+            for line in f:
+                if ' error' in line.lower() or '\terror' in line.lower():
+                    errors[case].append((num, line.strip('\n')))
+                elif line.startswith('Solver finished at'):
+                    solver_exist[case] = False
+                elif line.startswith('Memory Working Set Current'):
+                    run_peaks = parse_memory(line)
+                elif line.startswith('MESH::Bricks: Total='):
+                    run_bricks = parse_bricks(line)
+                num += 1
 
-        for line in ref_text: # search file for errors
-            if line.startswith('Memory Working Set Current'):
-                ref_peaks = float(re.search(r'Memory Working Set Peak = ([0-9]*\.?[0-9]*)', line).group(1))
-            if line.startswith('MESH::Bricks: Total='):
-                ref_bricks = int(re.search(r'Total=(\d+)', line).group(1))
+        with open(os.path.join(test_path, 'ft_reference', form_name(case)), 'r') as f:
+            for line in f: # search file for errors
+                if line.startswith('Memory Working Set Current'):
+                    ref_peaks = parse_memory(line)
+                elif line.startswith('MESH::Bricks: Total='):
+                    ref_bricks = parse_bricks(line)
 
         memory_peak[case] = (run_peaks, ref_peaks)
         bricks[case] = (run_bricks, ref_bricks)
