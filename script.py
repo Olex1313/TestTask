@@ -8,6 +8,8 @@ M_DIFF = 0.5 # Memory set peak criteria
 def form_name(s : str) -> str:
     """
     used to make propper filenames
+    takes case name and forms it
+    example: s = 1 -> '1/1.stdout'
     """
     s = f'{str(s)}/{str(s)}.stdout'
     return s
@@ -15,16 +17,57 @@ def form_name(s : str) -> str:
 def parse_memory(line : str) -> float:
     """
     finds memory set peak in line and parses it using regex
+    takes line to search in
     """
     return float(re.search(r'Memory Working Set Peak = ([0-9]*\.?[0-9]*)', line).group(1))
 
 def parse_bricks(line : str) -> int:
     """
     finds total bricks count and parses it using regex
+    takes line to search in
     """
     return int(re.search(r'Total=(\d+)', line).group(1))
 
-def read_report(report : dict, path : str) -> dict:
+def analyze_ft_run(test_path : str, case : str) -> tuple:
+    """
+    searches through case .stdout file and looks for
+    errors, solver line, memory peak and total of bricks
+    takes path to test folder, case name
+    returns errors list : list, solver line : bool, run memory : int, run bricks : int 
+    """
+    error_list = []
+    solver_not_exist = True
+    # search ft_run file
+    with open(os.path.join(test_path,'ft_run', form_name(case)), 'r') as f:
+        num = 1
+        for line in f:
+            if ' error' in line.lower() or '\terror' in line.lower():
+                error_list.append((num, line.strip('\n')))
+            elif line.startswith('Solver finished at'):
+                solver_not_exist = False
+            elif line.startswith('Memory Working Set Current'):
+                run_peaks = parse_memory(line)
+            elif line.startswith('MESH::Bricks: Total='):
+                run_bricks = parse_bricks(line)
+            num += 1
+    return error_list, solver_not_exist, run_peaks, run_bricks
+
+def analyze_ft_ref(test_path : str, case : str) -> tuple:
+    """
+    searches through ft_reference file, looks for
+    memory peak value and total bricks value
+    takes path to test folder, case name
+    returns reference memory : int, reference bricks : int
+    """
+    with open(os.path.join(test_path, 'ft_reference', form_name(case)), 'r') as f:
+        for line in f:
+            if line.startswith('Memory Working Set Current'):
+                ref_peaks = parse_memory(line)
+            elif line.startswith('MESH::Bricks: Total='):
+                ref_bricks = parse_bricks(line)
+    return ref_peaks, ref_bricks
+    
+def read_report(report : dict, path : str) -> None:
     """
     reads report.txt and writes to stdout
     takes report : dict, path : str
@@ -44,7 +87,7 @@ def read_report(report : dict, path : str) -> dict:
         with open(os.path.join(path, 'report.txt'), 'r') as f:
             print(f.read(), end='')
 
-def make_report(results : dict, path : str):
+def make_report(results : dict, path : str) -> None:
     """
     makes report.txt file in path directory
     takes results : dict , path : str
@@ -73,8 +116,8 @@ def make_report(results : dict, path : str):
         reps = [] # to store errors in report, needed to sort errors
 
         cases_tests = results['cases_errors']
-        if any(cases_tests.values()):
-            for test in cases_tests:
+        if any(cases_tests.values()): # checks if any errors in test exists
+            for test in cases_tests: # if is, iterates over test and adds error to reps if found
                 if cases_tests[test] != []:
                     for error in cases_tests[test]:
                         num = error[0]
@@ -82,7 +125,7 @@ def make_report(results : dict, path : str):
                         reps.append(f"{test}/{test}.stdout({num}): {line}")
 
         solver_tests = results['solver']
-        if any(solver_tests.values()):
+        if any(solver_tests.values()): # similiar to errors check
             for test in solver_tests:
                 if solver_tests[test]:
                     reps.append(f"{test}/{test}.stdout: missing 'Solver finished at'")
@@ -92,7 +135,7 @@ def make_report(results : dict, path : str):
             run = memory[test][0]
             ref = memory[test][1]
             diff = (run - ref) / ref
-            if abs(diff) > M_DIFF:
+            if abs(diff) > M_DIFF: # if values are invalid form error string
                 rep = f"{test}/{test}.stdout: different 'Memory Working Set Peak' "
                 stats = f"(ft_run={run}, ft_reference={ref}, rel.diff={diff:.2f}, criterion={M_DIFF:.1f})"
                 reps.append(rep+stats)
@@ -102,7 +145,7 @@ def make_report(results : dict, path : str):
             run = bricks[test][0]
             ref = bricks[test][1]
             diff = round((run - ref) / ref, 2)
-            if abs(diff) > B_DIFF:
+            if abs(diff) > B_DIFF: # if values are invalid form error string
                 rep = f"{test}/{test}.stdout: different 'Total' of bricks "
                 stats = f"(ft_run={run}, ft_reference={ref}, rel.diff={diff:.2f}, criterion={B_DIFF:.1f})"
                 reps.append(rep+stats)
@@ -114,6 +157,8 @@ def make_report(results : dict, path : str):
 def check_test(test_path : str) -> dict:
     """
     check test in test_path
+    takes path to test
+    returns dict, keys are analyzed attributes, values are  
     """
     report = {
         'group': os.path.split(os.path.split(test_path)[0])[-1],
@@ -142,30 +187,11 @@ def check_test(test_path : str) -> dict:
     solver_exist = {} # to store solver existance of solver lines
     memory_peak = {} # to store case : last memory peak
     bricks = {} # to store case : last bricks number
+    
+    # analyze ft_run and ft_reference .stdout files
     for case in ft_run:
-        errors[case] = []
-        solver_exist[case] = True
-        # search ft_run file
-        with open(os.path.join(test_path,'ft_run', form_name(case)), 'r') as f:
-            num = 1
-            for line in f:
-                if ' error' in line.lower() or '\terror' in line.lower():
-                    errors[case].append((num, line.strip('\n')))
-                elif line.startswith('Solver finished at'):
-                    solver_exist[case] = False
-                elif line.startswith('Memory Working Set Current'):
-                    run_peaks = parse_memory(line)
-                elif line.startswith('MESH::Bricks: Total='):
-                    run_bricks = parse_bricks(line)
-                num += 1
-
-        with open(os.path.join(test_path, 'ft_reference', form_name(case)), 'r') as f:
-            for line in f: # search file for errors
-                if line.startswith('Memory Working Set Current'):
-                    ref_peaks = parse_memory(line)
-                elif line.startswith('MESH::Bricks: Total='):
-                    ref_bricks = parse_bricks(line)
-
+        errors[case], solver_exist[case], run_peaks, run_bricks = analyze_ft_run(test_path, case)
+        ref_peaks, ref_bricks = analyze_ft_ref(test_path, case)
         memory_peak[case] = (run_peaks, ref_peaks)
         bricks[case] = (run_bricks, ref_bricks)
 
@@ -174,6 +200,7 @@ def check_test(test_path : str) -> dict:
     report['cases_errors'] = errors
     report['memory_test'] = memory_peak
     report['bricks'] = bricks
+
     return report
 
 # getting list with absolute path to test groups
