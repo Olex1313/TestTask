@@ -185,4 +185,3 @@ for group in folders:
         report = check_test(test)
         make_report(report, test) # make report
         read_report(report, test) # read it to stdout
-
